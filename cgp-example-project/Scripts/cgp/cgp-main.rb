@@ -35,13 +35,8 @@
 │     └───────────────────────────────────────────────────────────────────┘    │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-
-────────────────────────────────────────────────────────────────────────────────
-HISTORY OF THE ENTIRE SCRIPT, I GUESS
-────────────────────────────────────────────────────────────────────────────────
-04.05.2023 - I was born at a very early age
-────────────────────────────────────────────────────────────────────────────────
-}#█████████████████████████████████████████████████████████████████████████████
+}
+#_█████████████████████████████████████████████████████████████████████████████
 :_█████████████████████████████████████████████████████████████████████████████
 "_███████████████████ I advise you not to edit the code below.█████████████████"
 %{█████████████████████ It makes tech support MUCH harder. ████████████████████}
@@ -51,3 +46,27 @@ HISTORY OF THE ENTIRE SCRIPT, I GUESS
 %{█████████████████████████████████████████████████████████████████████████████}
 
 $imported ||= {}; $imported[:cgp] = true
+
+module CGP_Msg
+  def self.error(str)
+    msg = "\n\n\n\n\n\t\t┌───────────┐\n\t\t│ CGP ERROR │"
+    msg.concat "\n\t\t└───────────┘\n\n\n\n\n"
+    msg.concat "#{str}"
+    # ┌─────────────────────────────────────────────────────────────┐
+    # │ Hello                                                       │
+    # │ If you are taken to this line after a crash,                │
+    # │ there is something wrong with the way you set up CGP Config │
+    # └─────────────────────────────────────────────────────────────┘
+    raise msg # <--- if an error comes NOT from this line, report back to me
+  end
+
+  def self.warning(str)
+    msg = "\n\n\n\n\n\t\t┌──────────────┐\n\t\t│ CGP  WARNING │"
+    msg.concat "\n\t\t└──────────────┘\n\t"
+    msg.concat "(this will only appear in test mode)"
+    msg.concat "\t\t\t\t\t\t\t\t\t\t"
+    msg.concat "\n\n\n\n\n"
+    msg.concat "#{str}"
+    msgbox msg if $TEST
+  end
+end
