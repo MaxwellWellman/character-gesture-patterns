@@ -302,12 +302,10 @@ module CGP_Map
       :star => []
     }
 
-    def impasse? x, y, dir
+    def impasse? x, y
       map = $game_map
-      new_x = map.round_x_with_direction x, dir
-      new_y = map.round_y_with_direction y, dir
       impasse = 0xF # [X] indoor wall
-      tiles = map.layered_tiles new_x, new_y
+      tiles = map.layered_tiles x, y
       tiles.any? { |tile_id|
         map.tileset.flags[tile_id] & impasse == impasse
       }
@@ -335,6 +333,9 @@ module CGP_Map
     def get_markers regex
       # TODO multiple tags in one comment
       #  also get from map's note
+
+      # make a looser regex to check for <cgp.*>, during validation
+      # to catch incorrect tags
       comment_code = 108
       markers = []
       $game_map.events.each { |ev_arr|
@@ -414,10 +415,12 @@ module CGP_Char
     end
 
     def move_cardinal char, dir
+      x = $game_map.round_x_with_direction char.x, dir
+      y = $game_map.round_x_with_direction char.y, dir
       if char.debug_through?
         return move_freely char, dir
       end
-      if CGP_Map::impasse? char.x, char.y, dir
+      if CGP_Map::impasse? x, y
         return dont_move char, dir
       end
       gravity = get_prop char, :complexion, :gravity
@@ -434,10 +437,10 @@ module CGP_Char
     end
 
     def move_horizontal char, dir
-      x = $game_map.round_x_with_direction char.x, dir
-      if $game_map.counter? x, char.y
-        unless $game_map.damage_floor?(x, char.y + 1) or
-          !$game_map.counter?(x, char.y + 1)
+      map = $game_map
+      x = map.round_x_with_direction char.x, dir
+      unless map.damage_floor?(x, char.y + 1)
+        if map.counter? x, char.y and !map.counter? char.x, char.y
           return dont_move char, dir
         end
       end
@@ -486,8 +489,17 @@ module CGP_Char
         transfer_dir = 4
       end
       # TODO: vertical
-      regex =
-        /<cgp\sauto\stransfer\s(down|left|right|up)\s(\d+)(?:\sregion\s(\d+))?>/
+
+      regex_str = "" # TODO: get all comments of an event and concat them
+      [
+        /<cgp\sauto-transfer>\n/,
+        /<direction:\s(down|left|right|up|2|4|6|8)>\n/,
+        /<destination:\s(?:"((?:\w|\s)+)"|(\d+))>/,
+        /(?:\n<region:\s(\d+)>)?/
+      ].each { |r|
+        regex_str.concat r.source
+      }
+      regex = Regexp.new regex_str
       markers = CGP_Map::get_markers regex
       markers.each do |marker|
         if regex =~ marker
@@ -540,19 +552,18 @@ module CGP_Char
           x, y = CGP_Map::landing_position x, y + 1
         end
       end
-      if x_dist < 0
-        char.set_direction 4
-      end
-      if x_dist > 0
-        char.set_direction 6
-      end
-      if x_dist == 0
+      case x_dist
+      when 0
         if y_dist < 0
           char.set_direction 8
         end
         if y_dist > 0
           char.set_direction 2
         end
+      when 1..Float::INFINITY
+        char.set_direction 6
+      when -Float::INFINITY..-1
+        char.set_direction 4
       end
       jump_freely char, x - char.x, y - char.y
     end
